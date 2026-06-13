@@ -33,8 +33,8 @@ if prompt := st.chat_input("Ask me anything..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         try:
-            # Using the exact full model path to resolve the 404 error
-            model = genai.GenerativeModel("models/gemini-1.5-flash")
+            # Using 'gemini-1.5-flash-latest' to bypass any API version mismatch errors
+            model = genai.GenerativeModel("gemini-1.5-flash-latest")
             response = model.generate_content(prompt)
             
             # Extract and display the generated response
