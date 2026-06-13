@@ -1,27 +1,31 @@
 import streamlit as st
 import google.generativeai as genai
+import os
 
 # 1. Configure the Streamlit page layout and title
 st.set_page_config(page_title="Mahita AI Chatbot", page_icon="🤖")
 st.title("🤖 My AI Chatbot")
 
-# 2. Safely read and configure the Gemini API Key from Streamlit Secrets
+# 2. Force the API to use the exact v1beta version to stop the mismatch
+os.environ["STREAMLIT_SERVER_COOKIE_SECRET"] = "secret" # temporary workaround
+
+# 3. Safely read and configure the Gemini API Key from Streamlit Secrets
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
     st.error("Please add your 'GEMINI_API_KEY' in your Streamlit Dashboard Secrets first!")
     st.stop()
 
-# 3. Initialize chat history in session state so messages persist on refresh
+# 4. Initialize chat history in session state so messages persist on refresh
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 4. Render existing chat history onto the interface
+# 5. Render existing chat history onto the interface
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. Accept dynamic user input (e.g., "Hi", "Bye")
+# 6. Accept dynamic user input (e.g., "Hi", "Bye")
 if prompt := st.chat_input("Ask me anything..."):
     # Display the user's message instantly
     with st.chat_message("user"):
@@ -29,12 +33,12 @@ if prompt := st.chat_input("Ask me anything..."):
     # Save user message to persistent history state
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # 6. Query the backend Gemini model for a response
+    # 7. Query the backend Gemini model for a response
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         try:
-            # Using the exact standard model path now that the library is updated
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            # Using 'gemini-pro' specifically designed for the v1beta endpoint
+            model = genai.GenerativeModel(model_name="gemini-pro")
             response = model.generate_content(prompt)
             
             # Extract and display the generated response
@@ -45,5 +49,12 @@ if prompt := st.chat_input("Ask me anything..."):
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            # Capture and render any API or platform errors clearly
-            st.error(f"An error occurred: {e}")
+            # If gemini-pro fails, try forcing the text-only configuration
+            try:
+                model = genai.GenerativeModel('models/gemini-pro')
+                response = model.generate_content(prompt)
+                full_response = response.text
+                message_placeholder.markdown(full_response)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+            except Exception as inner_e:
+                st.error(f"An error occurred: {inner_e}")
