@@ -1,44 +1,50 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 
-# Setup the web page configuration
-st.set_page_config(page_title="AI Chatbot", page_icon="🤖")
+# 1. Configure the Streamlit page layout and title
+st.set_page_config(page_title="Mahita AI Chatbot", page_icon="🤖")
 st.title("🤖 My AI Chatbot")
 
-# Define the API Key variable
-# Replace the string below with your actual Gemini API key from Google AI Studio
-API_KEY = "AQ.Ab8RN6K8pWM0mwuTFHF6bAQTjRttH5HAzQ-LXeUkmk6282gNiw" 
+# 2. Safely read and configure the Gemini API Key from Streamlit Secrets
+# (This links directly with the GEMINI_API_KEY you saved in share.streamlit.io)
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+except Exception as e:
+    st.error("Please add your 'GEMINI_API_KEY' in your Streamlit Dashboard Secrets first!")
+    st.stop()
 
-if API_KEY == "PASTE_YOUR_GEMINI_API_KEY_HERE":
-    st.warning("Please insert your actual Gemini API Key into the code.")
-else:
-    # Initialize the Google GenAI client
-    client = genai.Client(api_key=API_KEY)
+# 3. Initialize chat history in session state so messages persist on refresh
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    # Initialize the session state for chat history if it doesn't exist
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+# 4. Render existing chat history onto the interface
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-    # Display all previous chat messages from history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+# 5. Accept dynamic user input (e.g., "Hi", "Bye")
+if prompt := st.chat_input("Ask me anything..."):
+    # Display the user's message instantly
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    # Save user message to persistent history state
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Handle new user input
-    if prompt := st.chat_input("Ask me anything..."):
-        # Display user message and add to history
-        st.chat_message("user").markdown(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        # Generate and display assistant response
-        with st.chat_message("assistant"):
-            try:
-                # Call the Gemini 3 Flash Preview model
-                response = client.models.generate_content(
-                    model='gemini-3-flash-preview', 
-                    contents=prompt,
-                )
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+    # 6. Query the backend Gemini model for a response
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        try:
+            # Using the fast, highly reliable gemini-1.5-flash model
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(prompt)
+            
+            # Extract and display the generated response
+            full_response = response.text
+            message_placeholder.markdown(full_response)
+            
+            # Save the assistant response to persistent history state
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            
+        except Exception as e:
+            # Capture and render any API or platform errors clearly
+            st.error(f"An error occurred: {e}")
