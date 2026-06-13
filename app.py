@@ -33,11 +33,9 @@ if prompt := st.chat_input("Ask me anything..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         try:
-            # Using the absolute correct method for current API versions
-            response = genai.generate_text(
-                model="models/gemini-1.5-flash",
-                prompt=prompt
-            )
+            # Using the exact standard model path now that the library is updated
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(prompt)
             
             # Extract and display the generated response
             full_response = response.text
@@ -47,12 +45,5 @@ if prompt := st.chat_input("Ask me anything..."):
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            # If the above fails, fall back to the standard text generation method
-            try:
-                model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-                response = model.generate_content(prompt)
-                full_response = response.text
-                message_placeholder.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-            except Exception as inner_e:
-                st.error(f"An error occurred: {inner_e}")
+            # Capture and render any API or platform errors clearly
+            st.error(f"An error occurred: {e}")
