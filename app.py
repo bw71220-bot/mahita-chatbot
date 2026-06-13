@@ -6,7 +6,6 @@ st.set_page_config(page_title="Mahita AI Chatbot", page_icon="🤖")
 st.title("🤖 My AI Chatbot")
 
 # 2. Safely read and configure the Gemini API Key from Streamlit Secrets
-# (This links directly with the GEMINI_API_KEY you saved in share.streamlit.io)
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
@@ -34,8 +33,8 @@ if prompt := st.chat_input("Ask me anything..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         try:
-            # Using the fast, highly reliable gemini-1.5-flash model
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            # Using the stable gemini-pro model to fix the 404 error
+            model = genai.GenerativeModel("gemini-pro")
             response = model.generate_content(prompt)
             
             # Extract and display the generated response
